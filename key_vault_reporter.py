@@ -233,30 +233,34 @@ def main():
                     query_params = query_params
                 )
                 
+                # Create a record for each key or secret
                 if 'error' not in key_vault_response:
                     for key_vault_data in key_vault_response['value']:
+                        key_vault_record = {
+                                'subscription':vault['subscription_id'],
+                                'key_vault':vault['key_vault_name'],
+                                'created':(str(convert_time(key_vault_data['attributes']['created']))),
+                                'updated':(str(convert_time(key_vault_data['attributes']['updated']))),
+                                'enabled':key_vault_data['attributes']['enabled'],
+                                'age':((datetime.now(timezone.utc) - (convert_time(key_vault_data['attributes']['created']))).days)
+                        }
+
+                        # Logic to handle different attributes returned by key vs secret
                         if data_type == 'keys':
-                            key_vault_record = {
-                                'subscription':vault['subscription_id'],
-                                'key_vault':vault['key_vault_name'],
-                                'data_id':key_vault_data['kid'],
-                                'data_type':'key',
-                                'created':(str(convert_time(key_vault_data['attributes']['created']))),
-                                'updated':(str(convert_time(key_vault_data['attributes']['updated']))),
-                                'age':((datetime.now(timezone.utc) - (convert_time(key_vault_data['attributes']['created']))).days)
-                            }
-                            key_vault_records.append(key_vault_record)
+                            key_vault_record['data_id'] = key_vault_data['kid']
+                            key_vault_record['data_type'] = 'key'
                         else:
-                            key_vault_record = {
-                                'subscription':vault['subscription_id'],
-                                'key_vault':vault['key_vault_name'],
-                                'data_id':key_vault_data['id'],
-                                'data_type':'secret',
-                                'created':(str(convert_time(key_vault_data['attributes']['created']))),
-                                'updated':(str(convert_time(key_vault_data['attributes']['updated']))),
-                                'age':((datetime.now(timezone.utc) - (convert_time(key_vault_data['attributes']['created']))).days)
-                            }
-                            key_vault_records.append(key_vault_record)
+                            key_vault_record['data_id'] = key_vault_data['id']
+                            key_vault_record['data_type'] = 'secret'
+
+                        # If expiration is present record the date and time
+                        if 'exp' in key_vault_data['attributes']:
+                            key_vault_record['expires'] = (str(convert_time(key_vault_data['attributes']['exp'])))
+                        else:
+                            key_vault_record['expires'] = None
+
+                        # Append the record to the list
+                        key_vault_records.append(key_vault_record)
 
         # Deliver data to Azure Monitor API
         json_data = json.dumps(key_vault_records)
