@@ -17,7 +17,7 @@ The properties pulled include:
 * Updated Date (UTC)
 * Expiration Date (UTC) (if present)
 * Enabled
-* Age in Days (Calcuated by the solution)
+* Age in Days (calculated by the solution)
 
 ## Requirements
 
